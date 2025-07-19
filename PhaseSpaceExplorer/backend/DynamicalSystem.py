@@ -16,6 +16,22 @@ class DynamicalSystem:
         return
     
     @property
+    def variable_names(self):
+        return self._variable_names
+    
+    @property
+    def parameter_names(self):
+        return self._parameter_names
+    
+    @property
+    def ODEs(self):
+        return self._ODEs
+    
+    @property
+    def periodic_data(self):
+        return self._periodic_data
+    
+    @property
     def loaded(self):
         return self._loaded
 
