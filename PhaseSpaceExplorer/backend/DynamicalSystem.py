@@ -47,7 +47,7 @@ class DynamicalSystem:
         return "\n".join(strings)
     
     def load_from_py(self, ds_folder_path):
-        ds_file_path = join(self._ds_folder_path, self._ds_filename)
+        ds_file_path = join(ds_folder_path, self._ds_filename)
 
         if not isfile(ds_file_path):
             print(f"Dynamical System file at {ds_file_path} not found")
