@@ -6,7 +6,9 @@ from backend.misc import bring_vector_in_bounds
 # TODO add type hinting
 
 class Trajectory():
-    def __init__(self) -> None:
+    def __init__(self, ODEs, initial_state) -> None:
+        self._ODEs = ODEs
+        self._initial_state = initial_state
         # The result of solve_ivp as if variables are not periodic
         self._y_sol = np.zeros(1)
         self._t_sol = np.zeros(1)
@@ -34,12 +36,15 @@ class Trajectory():
     def t_events(self): return self._t_events
 
     @property
-    def init_state(self): return self._y_sol[:,0]
+    def init_state(self): return self._initial_state
+    @init_state.setter
+    def init_state(self, value): self._initial_state = value
+    
     @property
     def last_state(self): return self._y_sol[:,-1]
 
 
-    def integrate_scipy(self, ODEs, init_state, pars, t_start, t_end, t_N, 
+    def integrate_scipy(self, pars, t_start, t_end, t_N, 
                         periodic_data:dict[int,list[float]]={},
                         alg:str="RK45", rtol:float=1e-5, atol:float=1e-5):
         # TODO add event of integration termination if out of boundaries
@@ -48,9 +53,10 @@ class Trajectory():
         t_span = (t_start, t_end)
         # TODO rework this magic number in max_step
         max_step = abs((t_end-t_start)/t_N * 5)
-        sol = solve_ivp(lambda t, U0: ODEs(U0, np.array(pars), t), 
+        dt = "+" if (t_end > t_start) else "-"
+        sol = solve_ivp(lambda t, U0: self._ODEs(U0, np.array(pars), t), 
                         t_span=t_span, 
-                        y0=init_state, 
+                        y0=self._initial_state, 
                         max_step=max_step,
                         method=alg, 
                         rtol=rtol, 
@@ -62,12 +68,14 @@ class Trajectory():
         # Flatten, sort and insert events into solution
         y_events_flat, t_events_flat = self.flatten_events(y_events_raw, t_events_raw)
         y_events_sort, t_events_sort = self.sort_events(y_events_flat, t_events_flat)
-        y_sol, t_sol = self.insert_events(y_sol_raw, t_sol_raw, y_events_sort, t_events_sort)
+        y_sol, t_sol = self.insert_events(y_sol_raw, t_sol_raw, y_events_sort, t_events_sort, dt)
         # Split solution from one events to the next
         # Note that t_events_sort must be sorted for this to work
         y_sols, t_sols = self.split_sol(y_sol, t_sol, t_events_sort)
         y_sols_in_period = self.to_period_sol(y_sols, periodic_data)
         # Save progress
+        self._y_sol = y_sol_raw
+        self._t_sol = t_sol_raw
         self._y_sols = y_sols_in_period
         self._t_sols = t_sols
         self._y_events = y_events_flat
@@ -84,6 +92,8 @@ class Trajectory():
     
     @staticmethod
     def sort_events(ys, ts):
+        if any((not ys, not ts)):
+            return ys, ts
         # Combite states and times together so that they are sorted together
         ys_ts_zip = zip(ys, ts)
         ys_ts_sort = sorted(ys_ts_zip, key=lambda y_t: y_t[1])
