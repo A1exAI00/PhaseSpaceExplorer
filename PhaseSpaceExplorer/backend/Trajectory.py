@@ -74,8 +74,8 @@ class Trajectory():
         y_sols, t_sols = self.split_sol(y_sol, t_sol, t_events_sort)
         y_sols_in_period = self.to_period_sol(y_sols, periodic_data)
         # Save progress
-        self._y_sol = y_sol_raw
-        self._t_sol = t_sol_raw
+        self._y_sol = y_sol
+        self._t_sol = t_sol
         self._y_sols = y_sols_in_period
         self._t_sols = t_sols
         self._y_events = y_events_flat
@@ -108,7 +108,7 @@ class Trajectory():
         for (i,t_event) in enumerate(t_events_sort):
             state_to_insert = y_events_sort[i]
             time_to_insert = t_event
-            for (j,t) in enumerate(t_sol_raw):
+            for (j,t) in enumerate(t_sol):
                 if (dt == "+") and (t >= t_event):
                     y_sol = np.insert(y_sol, j, state_to_insert, axis=1)
                     t_sol = np.insert(t_sol, j, time_to_insert)
