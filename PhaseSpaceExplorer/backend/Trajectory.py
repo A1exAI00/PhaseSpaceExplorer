@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import numpy as np
 from scipy.integrate import solve_ivp
 
@@ -13,11 +15,11 @@ class Trajectory():
         self._y_sol = np.zeros(1)
         self._t_sol = np.zeros(1)
         # List of lists of y solutions and t solutions
-        self._y_sols = np.zeros(1)
-        self._t_sols = np.zeros(1)
+        self._y_sols = []
+        self._t_sols = []
         # List of y events and t_events
-        self._y_events = np.zeros(1)
-        self._t_events = np.zeros(1)
+        self._y_events = []
+        self._t_events = []
         return
     
     @property
@@ -144,11 +146,31 @@ class Trajectory():
     
     @staticmethod
     def to_period_sol(yss, periodic_data):
-        yss_in_period = [[]]*len(yss)
+        new_yss = deepcopy(yss) # TODO replace with propper data structure copy to save compute time
+        # Iterate over all subsolutions
         for i in range(len(yss)):
+            # Get subsolution with signature ys[dim,time]
             ys = yss[i]
+            # Calculate mean with respect to time
+            ys_mean = np.mean(ys, axis=1)
+
+            # Iterate over dims in periodic_data
             for (j,data) in periodic_data.items():
                 offset, period = data
-                ys_in_period = bring_vector_in_bounds(ys[j], offset, period)
-                yss_in_period[i].append(ys_in_period)
-        return yss_in_period
+                
+                # Calculate a number of period shifts
+                # to be ∈ [offset, offset+period]
+                n_periods = 0
+                while ys_mean[j] - n_periods*period > offset+period:
+                    n_periods += 1
+                while ys_mean[j] - n_periods*period < offset:
+                    n_periods -=1
+
+                # Create one-hot-row matrix
+                # and shift solution along one spacial dimention
+                shift = np.zeros_like(ys)
+                shift[j,:] = n_periods*period
+                ys = ys - shift
+            
+            new_yss[i] = ys
+        return new_yss
