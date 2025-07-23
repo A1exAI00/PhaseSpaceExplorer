@@ -11,6 +11,7 @@ class DynamicalSystem:
         self._parameter_names = None
         self._ODEs = None
         self._periodic_data = None
+        self._periodic_events = None
 
         self._loaded = False
         return
@@ -32,6 +33,10 @@ class DynamicalSystem:
         return self._periodic_data
     
     @property
+    def periodic_events(self):
+        return self._periodic_events
+    
+    @property
     def loaded(self):
         return self._loaded
 
@@ -43,6 +48,7 @@ class DynamicalSystem:
                    f"Variable names: {self._variable_names}",
                    f"Parameter names: {self._parameter_names}",
                    f"Periodic variable data: {self._periodic_data}",
+                   f"Periodic events: {self._periodic_events}",
                    f"ODEs: {self._ODEs}"]
         return "\n".join(strings)
     
@@ -80,6 +86,11 @@ class DynamicalSystem:
             periodic_data = ds_module["periodic_data"]
         except:
             periodic_data = {}
+
+        try: 
+            periodic_events = ds_module["periodic_events"]
+        except:
+            periodic_events = []
         
         self._ds_folder_path = ds_folder_path
         self._ds_file_path = ds_file_path
@@ -87,5 +98,6 @@ class DynamicalSystem:
         self._parameter_names = parameter_names
         self._ODEs = ODEs
         self._periodic_data = periodic_data
+        self._periodic_events = periodic_events
         self._loaded = True
         return True
