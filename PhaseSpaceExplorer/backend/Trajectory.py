@@ -49,9 +49,9 @@ class Trajectory():
     def integrate_scipy(self, pars, t_start, t_end, t_N, 
                         periodic_data:dict[int,list[float]]={},
                         alg:str="RK45", rtol:float=1e-5, atol:float=1e-5):
-        # TODO add event of integration termination if out of boundaries
-        periodic_events = [lambda t, y: np.sin(np.pi*(y[i]-offset)/period)
-                  for (i,(offset, period)) in periodic_data.items()]
+        periodic_events = self.create_periodic_events(periodic_data)
+        # explode_inf_events = self.create_explode_inf_events() # TODO add explode to infinity event
+        all_events = periodic_events # + explode_inf_events
         t_span = (t_start, t_end)
         # TODO rework this magic number in max_step
         max_step = abs((t_end-t_start)/t_N * 5)
@@ -63,7 +63,7 @@ class Trajectory():
                         method=alg, 
                         rtol=rtol, 
                         atol=atol,
-                        events=periodic_events)
+                        events=all_events)
         # Get raw solution and raw events from solve_ivp
         y_sol_raw, t_sol_raw = sol.y, sol.t
         y_events_raw, t_events_raw = sol.y_events, sol.t_events
@@ -174,3 +174,11 @@ class Trajectory():
             
             new_yss[i] = ys
         return new_yss
+    
+    @staticmethod
+    def create_periodic_events(periodic_data:dict[int,list[float]]={}):
+        periodic_events = [
+            lambda t, y: np.sin(np.pi*(y[i]-offset)/period)
+            for (i,(offset, period)) in periodic_data.items()
+        ]
+        return periodic_events
