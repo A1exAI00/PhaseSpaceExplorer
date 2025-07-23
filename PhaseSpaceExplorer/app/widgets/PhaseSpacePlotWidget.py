@@ -1,7 +1,7 @@
 from typing import List
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget, QComboBox, QHBoxLayout, QPushButton
-from PySide6.QtCore import QTimer
+# from PySide6.QtCore import QTimer
 
 from matplotlib.backends.backend_qtagg import FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar

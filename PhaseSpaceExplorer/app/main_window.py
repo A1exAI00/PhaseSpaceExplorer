@@ -19,7 +19,7 @@ class MainWindow(QMainWindow):
 
     def setup_ui(self):
         self.setWindowTitle("PhaseSpaceExplorer by Alex Akinin")
-        # self.setGeometry(50, 50, 900, 700)
+        self.setGeometry(50, 50, 1700, 900)
 
         # Create MDI area
         self.mdi = QMdiArea()

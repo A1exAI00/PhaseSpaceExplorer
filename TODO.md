@@ -16,6 +16,7 @@
 - [x] Window to choose dynamical system
 - [ ] Window to create dynamical system
 - [ ] Text to float/int/math interpretation
+- [ ] Key shortcuts
 
 # Far Future
 - [ ] Write documentation for PhaseSpaceWorkbench, __highlight__ the logic behind events, maybe design a flow chart.

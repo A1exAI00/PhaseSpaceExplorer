@@ -1,13 +1,4 @@
-from copy import deepcopy
-
-import numpy as np
-from PySide6 import Qt
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QHBoxLayout, QComboBox, QLineEdit, QCheckBox, QFileDialog, QLabel
-
-# For VSCode autocomplete, to avoid circular import
-# from typing import TYPE_CHECKING
-# if TYPE_CHECKING:
-#     from gui.WorkbenchPhaseSpace import WorkbenchPhaseSpace
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QLineEdit, QFileDialog, QLabel
 
 from app.controllers.MainController import MainController
 
