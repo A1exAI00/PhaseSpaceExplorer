@@ -1,6 +1,7 @@
 from typing import List
 
-from PySide6.QtWidgets import QVBoxLayout, QWidget, QComboBox, QHBoxLayout, QPushButton
+from PySide6.QtWidgets import (
+    QVBoxLayout, QWidget, QComboBox, QHBoxLayout, QPushButton)
 # from PySide6.QtCore import QTimer
 
 from matplotlib.backends.backend_qtagg import FigureCanvas
@@ -11,6 +12,7 @@ from matplotlib.lines import Line2D
 
 from app.controllers.PhaseSpaceController import PhaseSpaceController
 from backend.DynamicalSystem import DynamicalSystem
+
 
 class PhaseSpacePlotWidget(QWidget):
     def __init__(self, ds:DynamicalSystem, controller:PhaseSpaceController):
@@ -86,12 +88,14 @@ class PhaseSpacePlotWidget(QWidget):
         y_label_index = self._canvas.y_label_index
 
         if x_label_index != len(self._available_labels)-1:
-            to_plot_xs = [trajectory.y_sols[i][x_label_index,:] for i in range(len(trajectory.y_sols))]
+            to_plot_xs = [trajectory.y_sols[i][x_label_index,:] 
+                          for i in range(len(trajectory.y_sols))]
         else:
             to_plot_xs = trajectory.t_sols
 
         if y_label_index != len(self._available_labels)-1:
-            to_plot_ys = [trajectory.y_sols[i][y_label_index,:] for i in range(len(trajectory.y_sols))]
+            to_plot_ys = [trajectory.y_sols[i][y_label_index,:] 
+                          for i in range(len(trajectory.y_sols))]
         else:
             to_plot_ys = trajectory.t_sols
 

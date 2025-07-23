@@ -2,6 +2,7 @@ from os.path import join, isfile
 
 from backend.load_from_py import import_module_with_exec
 
+
 class DynamicalSystem:
     def __init__(self):
         self._ds_filename = "dynamical_system.py"

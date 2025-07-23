@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import (QApplication, QMainWindow, QMdiArea, QMdiSubWindow)
+from PySide6.QtWidgets import QMainWindow, QMdiArea, QMdiSubWindow
 
 from app.controllers.PhaseSpaceController import PhaseSpaceController
 from app.controllers.MainController import MainController
@@ -8,6 +8,7 @@ from app.widgets.PhaseSpacePlotWidget import PhaseSpacePlotWidget
 from app.widgets.FolderSelector import FolderSelector
 
 from backend.DynamicalSystem import DynamicalSystem
+
 
 class MainWindow(QMainWindow):
     def __init__(self):

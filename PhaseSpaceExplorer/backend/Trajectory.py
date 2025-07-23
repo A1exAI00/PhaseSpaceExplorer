@@ -3,12 +3,9 @@ from copy import deepcopy
 import numpy as np
 from scipy.integrate import solve_ivp
 
-from backend.misc import bring_vector_in_bounds
-
-# TODO add type hinting
 
 class Trajectory():
-    def __init__(self, ODEs, initial_state) -> None:
+    def __init__(self, ODEs, initial_state):
         self._ODEs = ODEs
         self._initial_state = initial_state
         # The result of solve_ivp as if variables are not periodic
@@ -23,57 +20,77 @@ class Trajectory():
         return
     
     @property
-    def y_sol(self): return self._y_sol
+    def y_sol(self): 
+        return self._y_sol
     @property
-    def t_sol(self): return self._t_sol
+    def t_sol(self): 
+        return self._t_sol
     
     @property
-    def y_sols(self): return self._y_sols
+    def y_sols(self): 
+        return self._y_sols
     @property
-    def t_sols(self): return self._t_sols
+    def t_sols(self): 
+        return self._t_sols
     
     @property
-    def y_events(self): return self._y_events
+    def y_events(self): 
+        return self._y_events
     @property
-    def t_events(self): return self._t_events
+    def t_events(self): 
+        return self._t_events
 
     @property
-    def init_state(self): return self._initial_state
+    def init_state(self): 
+        return self._initial_state
     @init_state.setter
-    def init_state(self, value): self._initial_state = value
+    def init_state(self, value): 
+        self._initial_state = value
     
     @property
-    def last_state(self): return self._y_sol[:,-1]
+    def last_state(self): 
+        return self._y_sol[:,-1]
 
 
-    def integrate_scipy(self, pars, t_start, t_end, t_N, 
-                        periodic_data:dict[int,list[float]]={},
-                        periodic_events = [],
-                        alg:str="RK45", rtol:float=1e-5, atol:float=1e-5):
+    def integrate_scipy(
+            self, pars, t_start, t_end, t_N, 
+            periodic_data:dict[int,list[float]]={},
+            periodic_events = [],
+            alg:str="RK45", rtol:float=1e-5, atol:float=1e-5):
         all_events = periodic_events # + explode_inf_events
         t_span = (t_start, t_end)
+        dt = "+" if (t_end > t_start) else "-"
+
         # TODO rework this magic number in max_step
         max_step = abs((t_end-t_start)/t_N * 5)
-        dt = "+" if (t_end > t_start) else "-"
-        sol = solve_ivp(lambda t, U0: self._ODEs(U0, np.array(pars), t), 
-                        t_span=t_span, 
-                        y0=self._initial_state, 
-                        max_step=max_step,
-                        method=alg, 
-                        rtol=rtol, 
-                        atol=atol,
-                        events=all_events)
+
+        sol = solve_ivp(
+            lambda t, U0: self._ODEs(U0, np.array(pars), t), 
+            t_span=t_span, 
+            y0=self._initial_state, 
+            max_step=max_step,
+            method=alg, rtol=rtol, atol=atol,
+            events=all_events)
+        
         # Get raw solution and raw events from solve_ivp
         y_sol_raw, t_sol_raw = sol.y, sol.t
         y_events_raw, t_events_raw = sol.y_events, sol.t_events
+
         # Flatten, sort and insert events into solution
-        y_events_flat, t_events_flat = self.flatten_events(y_events_raw, t_events_raw)
-        y_events_sort, t_events_sort = self.sort_events(y_events_flat, t_events_flat)
-        y_sol, t_sol = self.insert_events(y_sol_raw, t_sol_raw, y_events_sort, t_events_sort, dt)
+        y_events_flat, t_events_flat = self.flatten_events(
+            y_events_raw, t_events_raw)
+        
+        y_events_sort, t_events_sort = self.sort_events(
+            y_events_flat, t_events_flat)
+        
+        y_sol, t_sol = self.insert_events(
+            y_sol_raw, t_sol_raw, y_events_sort, t_events_sort, dt)
+        
         # Split solution from one events to the next
         # Note that t_events_sort must be sorted for this to work
         y_sols, t_sols = self.split_sol(y_sol, t_sol, t_events_sort)
         y_sols_in_period = self.to_period_sol(y_sols, periodic_data)
+
         # Save progress
         self._y_sol = y_sol
         self._t_sol = t_sol
@@ -122,9 +139,11 @@ class Trajectory():
     
     @staticmethod
     def split_sol(ys, ts, t_markers):
+        # In case of no events
         if not t_markers:
             return [ys,], [ts,]
         yss, tss = [], []
+
         # Find temporal indexes of markers in ts
         i_markers = []
         for t_marker in t_markers:
@@ -132,9 +151,11 @@ class Trajectory():
                 if (t == t_marker):
                     i_markers.append(i)
                     break
+
         # Add first and last temporal indexes, makes algorithm easier
         if (i_markers[0] != 0): i_markers.insert(0, 0)
         if (i_markers[-1] != len(ts)): i_markers.append(len(ts))
+
         # Split ys and ts by i_markers
         for i in range(len(i_markers)-1):
             left = i_markers[i]
@@ -145,7 +166,9 @@ class Trajectory():
     
     @staticmethod
     def to_period_sol(yss, periodic_data):
-        new_yss = deepcopy(yss) # TODO replace with propper data structure copy to save compute time
+        # TODO replace with propper data structure copy to save compute time
+        new_yss = deepcopy(yss)
+
         # Iterate over all subsolutions
         for i in range(len(yss)):
             # Get subsolution with signature ys[dim,time]

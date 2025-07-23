@@ -1,4 +1,6 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QLineEdit, QFileDialog, QLabel
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QLineEdit, 
+    QFileDialog, QLabel)
 
 from app.controllers.MainController import MainController
 

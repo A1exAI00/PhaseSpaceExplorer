@@ -1,6 +1,7 @@
 import numpy as np
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem, QLineEdit
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem, QLineEdit)
 
 
 from app.controllers.PhaseSpaceController import PhaseSpaceController
@@ -8,7 +9,8 @@ from backend.DynamicalSystem import DynamicalSystem
 
 class ODEsParametersWidget(QWidget):
 
-    def __init__(self, dynamical_system:DynamicalSystem, controller:PhaseSpaceController):
+    def __init__(self, dynamical_system:DynamicalSystem, 
+                 controller:PhaseSpaceController):
         super().__init__()
         self._ds:DynamicalSystem = dynamical_system
         self._controller:PhaseSpaceController = controller

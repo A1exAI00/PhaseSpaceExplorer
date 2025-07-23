@@ -1,7 +1,9 @@
 from copy import deepcopy
 
 import numpy as np
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QTableWidget, QHBoxLayout, QComboBox, QLineEdit, QCheckBox
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QPushButton, QTableWidget, QHBoxLayout, 
+    QComboBox, QLineEdit, QCheckBox)
 
 from app.controllers.PhaseSpaceController import PhaseSpaceController
 from backend.DynamicalSystem import DynamicalSystem
@@ -21,7 +23,8 @@ class RowData():
 class InitialStateWidget(QWidget):
     _initial_state_type_options:list[str] = ["Dragpoint", "Tmp"]
     _dt_options:list[str] = ["+", "-"]
-    def __init__(self, ds:DynamicalSystem, controller:PhaseSpaceController):
+    def __init__(self, ds:DynamicalSystem, 
+                 controller:PhaseSpaceController):
         super().__init__()
         self._ds = ds
         self._controller = controller
@@ -37,7 +40,9 @@ class InitialStateWidget(QWidget):
         self._variable_value_default:float = 0.0
         default_row_data = {}
         default_row_data["type"] = self._initial_state_type_options[0]
-        default_row_data["trajectory"] = Trajectory(self._ds.ODEs, self._variable_value_default*np.ones(self._N_variables))
+        default_row_data["trajectory"] = Trajectory(
+            self._ds.ODEs, 
+            self._variable_value_default*np.ones(self._N_variables))
         default_row_data["show"] = True
         default_row_data["dt"] = self._dt_options[0]
         default_row_data["t_start"] = 0.0
@@ -46,7 +51,9 @@ class InitialStateWidget(QWidget):
         self._RowData_default = RowData(default_row_data)
         self._rows_data:list[RowData] = []
 
-        # self._headers_SoE =  ["Type",] + self.ds.variable_names + ["Show", "Autocorr.", "Correct", "dt", "eps", "Eig. N", "Eig. dir", "t start", "t end", "t steps"]
+        # self._headers_SoE =  ["Type",] + self.ds.variable_names \
+        #     + ["Show", "Autocorr.", "Correct", "dt", "eps", 
+        #        "Eig. N", "Eig. dir", "t start", "t end", "t steps"]
         
         self.setup_ui()
         self.connect_controller()
@@ -102,7 +109,8 @@ class InitialStateWidget(QWidget):
         # Add field for coordinates of initial state
         this_row_edits = []
         for i in range(len(self._ds.variable_names)):
-            edit = QLineEdit(placeholderText=str(new_row_data.trajectory.init_state[i]))
+            edit = QLineEdit(placeholderText=
+                             str(new_row_data.trajectory.init_state[i]))
             this_row_edits.append(edit)
             edit.editingFinished.connect(
                 lambda item=edit, n=curr_index, i=i:
