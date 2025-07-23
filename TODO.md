@@ -4,7 +4,9 @@
 
 # Big features
 - [ ] Init state table -> left click -> context window: field for step size
-- [ ] Init state table -> left click -> context window: copy and paste
+- [ ] Init state table -> left click -> context window: copy and paste init state
+- [ ] Init state table -> left click -> context window: copy last state
+- [ ] Init state table -> left click -> context window: copy solution
 - [ ] Init state table -> left click -> context window: delete row
 - [ ] Init state table -> left click -> context window: toggle show for all
 - [ ] Init state table -> left click -> context window: toggle autocorrect for all
