@@ -12,10 +12,11 @@ class DynamicHeaderTable(QTableWidget):
 
         self._variable_names = variable_names
 
-        self.setColumnCount(len(self._variable_names) + 10)
+        self.setColumnCount(len(self._variable_names) + 15)
         # self.setRowCount()
         
-        self._row_types = ["Dragpoint", "SoE"]
+        self._available_row_types = ["Dragpoint", "SoE"]
+        self._row_types = []
         
         self._default_headers = ["type",]
         self.fill_headers(self._default_headers)
@@ -61,10 +62,13 @@ class DynamicHeaderTable(QTableWidget):
             # Remove any item
             if self.item(row, col):
                 self.takeItem(row, col)
+        return
     
     def populate_row_dragpoint(self, row):
+        self._row_types.append("Dragpoint")
+        
         combo = QComboBox()
-        combo.addItems(self._row_types)
+        combo.addItems(self._available_row_types)
         combo.setCurrentIndex(0)
         combo.currentTextChanged.connect(
             lambda text, row=row: 
@@ -112,9 +116,11 @@ class DynamicHeaderTable(QTableWidget):
         return
     
     def populate_row_SoE(self, row):
+        self._row_types.append("SoE")
+
         combo = QComboBox()
-        combo.addItems(self._row_types)
-        combo.setCurrentIndex(0)
+        combo.addItems(self._available_row_types)
+        combo.setCurrentIndex(1)
         combo.currentTextChanged.connect(
             lambda text, row=row: 
             self.on_type_changed(row, text))
@@ -134,10 +140,10 @@ class DynamicHeaderTable(QTableWidget):
         self.setCellWidget(row, len(self._variable_names)+1, show)
 
         correct = QPushButton("Correct")
-        correct.click.connect(
+        correct.clicked.connect(
             lambda row=row:
             self.handle_correct(row))
-        self.setCellWidget(row, len(self._variable_names)+2, show)
+        self.setCellWidget(row, len(self._variable_names)+2, correct)
 
         autocorrect = QCheckBox()
         autocorrect.stateChanged.connect(
@@ -192,9 +198,13 @@ class DynamicHeaderTable(QTableWidget):
         self.setCellWidget(row, len(self._variable_names)+9, t_steps)
         return
     
-    def add_row(self):
+    def add_row(self, row_type):
         self.setRowCount(self.rowCount()+1)
-        self.populate_row_dragpoint(self.rowCount()-1)
+
+        if row_type == "Dragpoint":
+            self.populate_row_dragpoint(self.rowCount()-1)
+        if row_type == "SoE":
+            self.populate_row_SoE(self.rowCount()-1)
         return
 
     def fill_headers(self, headers):
@@ -203,23 +213,30 @@ class DynamicHeaderTable(QTableWidget):
         return
     
     def populate_table(self):
-        self.add_row()
-        self.populate_row_dragpoint(0)
+        self.add_row("Dragpoint")
+        self.add_row("SoE")
+        return
     
     def on_type_changed(self, row, new_type):
         """Handle when the type combo box changes for a row"""
         self._row_types[row] = new_type
         # Update the data in other columns to match new type
-        for col in range(1, self.columnCount()):
-            self.item(row, col).setText(f"{new_type}_data{col}")
+        self.clear_row(row)
+
+        if new_type == "Dragpoint":
+            self.populate_row_dragpoint(row)
+        if new_type == "SoE":
+            self.populate_row_SoE(row)
         
         # If this row is currently focused, update headers
         if self.currentRow() == row:
             self.update_headers_based_on_focus()
+        return
     
     def on_cell_focus_changed(self, current_row, current_col, previous_row, previous_col):
         """Handle when focus changes between cells"""
         self.update_headers_based_on_focus()
+        return
     
     def update_headers_based_on_focus(self):
         """Update headers based on which cell (if any) has focus"""
@@ -229,14 +246,15 @@ class DynamicHeaderTable(QTableWidget):
             self.setHorizontalHeaderLabels(self._default_headers)
         else:
             current_type = self._row_types[current_row]
-            if current_type == "ff":
+            if current_type == "Dragpoint":
                 self.setHorizontalHeaderLabels(self._headers_dragpoint)
             elif current_type == "SoE":
                 self.setHorizontalHeaderLabels(self._headers_SoE)
+        return
     
     def on_cell_changed(self, row, col):
         """Handle when cell content changes (if needed)"""
-        pass  # Add any additional handling if needed
+        return
 
 
 # Example usage
