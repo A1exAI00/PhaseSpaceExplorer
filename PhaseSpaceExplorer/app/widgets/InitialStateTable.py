@@ -7,50 +7,24 @@ from PySide6.QtWidgets import (
 
 from app.controllers.PhaseSpaceController import PhaseSpaceController
 
-class RowDataDragpoint():
-    def __init__(self, N_variables):
-        self.type = "Dragpoint"
-        self.variables = np.zeros(N_variables)
-        self.show = False
-        self.dt = "+"
-        self.t_start = 0.0
-        self.t_end = 10.0
-        self.t_steps = 1000
-        return
-    
-class RowDataSoE():
-    def __init__(self, N_variables):
-        self.type = "SoE"
-        self.variables = np.zeros(N_variables)
-        self.show = False
-        self.autocorrect = False
-        self.dt = "+"
-        self.eps = 1e-5
-        self.eig_N = 0
-        self.eig_dir = "+"
-        self.t_start = 0.0
-        self.t_end = 10.0
-        self.t_steps = 1000
-        return
-
 class InitialStateTable(QTableWidget):
     def __init__(
             self,
-            variable_names,
-            controller:PhaseSpaceController=None,
+            variable_names: list[str],
+            controller: PhaseSpaceController = None,
             parent=None):
         super().__init__(parent)
 
-        self._controller = controller
-        self._variable_names = variable_names
-
+        self._controller: PhaseSpaceController = controller
+        self._variable_names: list[str] = variable_names
         
-        self._available_row_types = ["Dragpoint", "SoE"]
-        self._row_types = []
-        self._row_datas = []
+        self._available_row_types: list[str] = ["Dragpoint", "SoE"]
+        self._rows: list[RowDataDragpoint | RowDataSoE] = []
+
+        self.setColumnCount(len(self._variable_names) + 15)
         
         self._default_headers = ["type",]
-        self.fill_headers(self._default_headers)
+        self._default_headers = self.fill_headers(self._default_headers)
 
         self._headers_dragpoint = ["type",] + self._variable_names
         self._headers_dragpoint.append("Show")
@@ -58,7 +32,7 @@ class InitialStateTable(QTableWidget):
         self._headers_dragpoint.append("t_start")
         self._headers_dragpoint.append("t_end")
         self._headers_dragpoint.append("t_steps")
-        self.fill_headers(self._headers_dragpoint)
+        self._headers_dragpoint = self.fill_headers(self._headers_dragpoint)
         
         self._headers_SoE = ["type",] + self._variable_names
         self._headers_SoE.append("Show")
@@ -71,19 +45,18 @@ class InitialStateTable(QTableWidget):
         self._headers_SoE.append("t_start")
         self._headers_SoE.append("t_end")
         self._headers_SoE.append("t_steps")
-        self.fill_headers(self._headers_SoE)
-        
-        # Set initial headers
-        self.setColumnCount(len(self._variable_names) + 15)
+        self._headers_SoE = self.fill_headers(self._headers_SoE)
+
         self.setHorizontalHeaderLabels(self._default_headers)
-        
-        # Populate the table with combo boxes and data
-        self.populate_table()
-        
-        # Connect signals
         
         self.connect_controller()
         return
+
+    def get_row_type(self, row):
+        return self._rows[row].type
+    
+    def get_row(self, row):
+        return self._rows[row]
     
     def connect_controller(self):
         self.cellChanged.connect(self.on_cell_changed)
@@ -98,183 +71,54 @@ class InitialStateTable(QTableWidget):
             # Remove any widget
             if self.cellWidget(row, col):
                 self.removeCellWidget(row, col)
-            
             # Remove any item
             if self.item(row, col):
                 self.takeItem(row, col)
-        return
-    
-    def populate_row_dragpoint(self, row):
-        self._row_types[row] = "Dragpoint"
-        data_obj = self._row_datas[row]
-        
-        combo = QComboBox()
-        combo.addItems(self._available_row_types)
-        combo.setCurrentIndex(self._available_row_types.index(data_obj.type))
-        combo.currentTextChanged.connect(
-            lambda text, row=row: 
-            self.on_type_changed(row, text))
-        self.setCellWidget(row, 0, combo)
-
-        for i in range(len(self._variable_names)):
-            field = QLineEdit(placeholderText="0.0") # TODO 
-            field.editingFinished.connect(
-                lambda item=field, row=row, i=i:
-                self.handle_variable_changed(item, row, i))
-            self.setCellWidget(row, 1+i, field)
-
-        show = QCheckBox() # TODO how to fucking set the state to checked
-        show.stateChanged.connect(
-            lambda state, row=row: 
-            self.handle_show_change(state, row))
-        self.setCellWidget(row, len(self._variable_names)+1, show)
-
-        dt = QComboBox(currentText=data_obj.dt)
-        dt.addItem("+")
-        dt.addItem("-")
-        dt.currentIndexChanged.connect(
-            lambda index_combobox, row=row:
-            self.handle_dt_changed(row, index_combobox))
-        self.setCellWidget(row, len(self._variable_names)+2, dt)
-
-        t_start = QLineEdit(placeholderText=str(data_obj.t_start))
-        t_start.editingFinished.connect(
-            lambda item=t_start, row=row:
-            self.handle_t_start_changed(item, row))
-        self.setCellWidget(row, len(self._variable_names)+3, t_start)
-
-        t_end = QLineEdit(placeholderText=str(data_obj.t_end))
-        t_end.editingFinished.connect(
-            lambda item=t_end, row=row:
-            self.handle_t_end_changed(item, row))
-        self.setCellWidget(row, len(self._variable_names)+4, t_end)
-
-        t_steps = QLineEdit(placeholderText=str(data_obj.t_steps))
-        t_steps.editingFinished.connect(
-            lambda item=t_steps, row=row:
-            self.handle_t_steps_changed(item, row))
-        self.setCellWidget(row, len(self._variable_names)+5, t_steps)
-        return
-    
-    def populate_row_SoE(self, row):
-        self._row_types[row] = "SoE"
-        data_obj = self._row_datas[row]
-
-        combo = QComboBox()
-        combo.addItems(self._available_row_types)
-        combo.setCurrentIndex(1)
-        combo.currentTextChanged.connect(
-            lambda text, row=row: 
-            self.on_type_changed(row, text))
-        self.setCellWidget(row, 0, combo)
-
-        for i in range(len(self._variable_names)):
-            field = QLineEdit(placeholderText="0.0") # TODO 
-            field.editingFinished.connect(
-                lambda item=field, row=row, i=i:
-                self.handle_variable_changed(item, row, i))
-            self.setCellWidget(row, 1+i, field)
-
-        show = QCheckBox() # TODO how to fucking set the state to checked
-        show.stateChanged.connect(
-            lambda state, row=row: 
-            self.handle_show_change(state, row))
-        self.setCellWidget(row, len(self._variable_names)+1, show)
-
-        correct = QPushButton("Correct")
-        correct.clicked.connect(
-            lambda row=row:
-            self.handle_correct(row))
-        self.setCellWidget(row, len(self._variable_names)+2, correct)
-
-        autocorrect = QCheckBox()
-        autocorrect.stateChanged.connect(
-            lambda state, row=row: 
-            self.handle_autocorrect_change(state, row))
-        self.setCellWidget(row, len(self._variable_names)+3, autocorrect)
-
-        dt = QComboBox(currentText=data_obj.dt)
-        dt.addItem("+")
-        dt.addItem("-")
-        dt.currentIndexChanged.connect(
-            lambda index_combobox, row=row:
-            self.handle_dt_changed(row, index_combobox))
-        self.setCellWidget(row, len(self._variable_names)+4, dt)
-
-        eps = QLineEdit(placeholderText=str(data_obj.eps))
-        eps.editingFinished.connect(
-            lambda item=eps, row=row:
-            self.handle_eps_changed(item, row))
-        self.setCellWidget(row, len(self._variable_names)+5, eps)
-
-        eig_N = QLineEdit(placeholderText=str(data_obj.eig_N))
-        eig_N.editingFinished.connect(
-            lambda item=eig_N, row=row:
-            self.handle_eig_N_changed(item, row))
-        self.setCellWidget(row, len(self._variable_names)+6, eig_N)
-
-        eig_dir = QComboBox(currentText=data_obj.eig_dir)
-        eig_dir.addItem("+")
-        eig_dir.addItem("-")
-        eig_dir.currentIndexChanged.connect(
-            lambda index_combobox, row=row:
-            self.handle_eig_dir_changed(row, index_combobox))
-        self.setCellWidget(row, len(self._variable_names)+7, eig_dir)
-
-        t_start = QLineEdit(placeholderText=str(data_obj.t_start))
-        t_start.editingFinished.connect(
-            lambda item=t_start, row=row:
-            self.handle_t_start_changed(item, row))
-        self.setCellWidget(row, len(self._variable_names)+8, t_start)
-
-        t_end = QLineEdit(placeholderText=str(data_obj.t_end))
-        t_end.editingFinished.connect(
-            lambda item=t_end, row=row:
-            self.handle_t_end_changed(item, row))
-        self.setCellWidget(row, len(self._variable_names)+9, t_end)
-
-        t_steps = QLineEdit(placeholderText=str(data_obj.t_steps))
-        t_steps.editingFinished.connect(
-            lambda item=t_steps, row=row:
-            self.handle_t_steps_changed(item, row))
-        self.setCellWidget(row, len(self._variable_names)+10, t_steps)
         return
     
     def add_row(self, row_type):
         self.setRowCount(self.rowCount()+1)
 
         if row_type == "Dragpoint":
-            self._row_types.append("Dragpoint")
-            self._row_datas.append(RowDataDragpoint(len(self._variable_names)))
-            self.populate_row_dragpoint(self.rowCount()-1)
+            new_row = RowDataDragpoint(
+                len(self._variable_names), 
+                self._available_row_types)
+            self._rows.append(new_row)
+            new_row.add_to_table(self, self.rowCount()-1)
+
         if row_type == "SoE":
-            self._row_types.append("SoE")
-            self._row_datas.append(RowDataSoE(len(self._variable_names)))
-            self.populate_row_SoE(self.rowCount()-1)
+            new_row = RowDataSoE(
+                len(self._variable_names), 
+                self._available_row_types)
+            self._rows.append(new_row)
+            new_row.add_to_table(self, self.rowCount()-1)
         return
 
-    def fill_headers(self, headers):
+    def fill_headers(self, headers: list[str]):
         while (len(headers) < self.columnCount()):
             headers.append(f"opt {len(headers)}")
-        return
-    
-    def populate_table(self):
-        self.add_row("Dragpoint")
-        self.add_row("SoE")
-        return
+        return headers
     
     def on_type_changed(self, row, new_type):
-        """Handle when the type combo box changes for a row"""
-        self._row_types[row] = new_type
-        # Update the data in other columns to match new type
+        # Delete old row
         self.clear_row(row)
-
+        old_row = self._rows[row]
+        self._rows[row] = None
+        del old_row
+        
         if new_type == "Dragpoint":
-            self._row_datas[row] = RowDataDragpoint(len(self._variable_names))
-            self.populate_row_dragpoint(row)
+            new_row = RowDataDragpoint(
+                len(self._variable_names), 
+                self._available_row_types)
+            self._rows[row] = new_row
+            new_row.add_to_table(self, row)
+
         if new_type == "SoE":
-            self._row_datas[row] = RowDataSoE(len(self._variable_names))
-            self.populate_row_SoE(row)
+            new_row = RowDataSoE(
+                len(self._variable_names), 
+                self._available_row_types)
+            self._rows[row] = new_row
+            new_row.add_to_table(self, row)
         
         # If this row is currently focused, update headers
         if self.currentRow() == row:
@@ -282,18 +126,16 @@ class InitialStateTable(QTableWidget):
         return
     
     def on_cell_focus_changed(self, current_row, current_col, previous_row, previous_col):
-        """Handle when focus changes between cells"""
         self.update_headers_based_on_focus()
         return
     
     def update_headers_based_on_focus(self):
-        """Update headers based on which cell (if any) has focus"""
         current_row = self.currentRow()
         
         if current_row == -1:  # No focus
             self.setHorizontalHeaderLabels(self._default_headers)
         else:
-            current_type = self._row_types[current_row]
+            current_type = self.get_row_type(current_row)
             if current_type == "Dragpoint":
                 self.setHorizontalHeaderLabels(self._headers_dragpoint)
             elif current_type == "SoE":
@@ -304,72 +146,86 @@ class InitialStateTable(QTableWidget):
         """Handle when cell content changes (if needed)"""
         return
     
-    def handle_variable_changed(self, item, n, i):
-        prev_value = self._row_datas[n].variables[i]
+    def handle_variable_changed(self, n, i):
+        field = self._rows[n].variables_fields[i]
+        prev_value = self._rows[n].variables[i]
 
         try:
-            new_value = float(item.text())
+            new_value = float(field.text())
         except:
-            item.setText(str(prev_value))
+            field.setText(str(prev_value))
             return
-        self._row_datas[n].variables[i] = new_value
-        item.setText(str(new_value))
+        self._rows[n].variables[i] = new_value
+        field.setText(str(new_value))
 
-        # TODO emit signal
+        _type = self.get_row_type(n)
+        signal_data = {"n":n, "type":_type}
+        self._controller.data_changed.emit(signal_data)
         return
     
     def handle_show_change(self, state, n):
-        self._row_datas[n].show = (state==2)
+        self._rows[n].show = (state==2)
 
         # TODO emit signal
         return
     
     def handle_dt_changed(self, n, index_combo):
-        self._row_datas[n].dt = ("+", "-")[index_combo] # TODO refactor ("+", "-")
+        self._rows[n].dt = ("+", "-")[index_combo]
 
-        # TODO emit signal
+        _type = self.get_row_type(n)
+        signal_data = {"n":n, "type":_type}
+        self._controller.data_changed.emit(signal_data)
         return
     
-    def handle_t_start_changed(self, item, n):
-        prev_value = self._row_datas[n].t_start
+    def handle_t_start_changed(self, n):
+        field = self._rows[n].t_start_field
+        prev_value = self._rows[n].t_start
 
         try:
-            new_value = float(item.text())
+            new_value = float(field.text())
         except:
-            item.setText(str(prev_value))
+            field.setText(str(prev_value))
             return
-        self._row_datas[n].t_start = new_value
-        item.setText(str(new_value))
+        self._rows[n].t_start = new_value
+        field.setText(str(new_value))
 
-        # TODO emit signal
+        _type = self.get_row_type(n)
+        signal_data = {"n":n, "type":_type}
+        self._controller.data_changed.emit(signal_data)
         return
     
-    def handle_t_end_changed(self, item, n):
-        prev_value = self._row_datas[n].t_end
+    def handle_t_end_changed(self, n):
+        field = self._rows[n].t_end_field
+        prev_value = self._rows[n].t_end
 
         try:
-            new_value = float(item.text())
+            new_value = float(field.text())
         except:
-            item.setText(str(prev_value))
+            field.setText(str(prev_value))
             return
-        self._row_datas[n].t_end = new_value
-        item.setText(str(new_value))
+        self._rows[n].t_end = new_value
+        field.setText(str(new_value))
 
-        # TODO emit signal
+        _type = self.get_row_type(n)
+        signal_data = {"n":n, "type":_type}
+        self._controller.data_changed.emit(signal_data)
         return
     
-    def handle_t_steps_changed(self, item, n):
-        prev_value = self._row_datas[n].t_steps
+    def handle_t_steps_changed(self, n):
+        field = self._rows[n].t_steps
+        prev_value = self._rows[n].t_steps
 
         try:
-            new_value = int(item.text())
+            new_value = int(field.text())
         except:
-            item.setText(str(prev_value))
+            field.setText(str(prev_value))
             return
-        self._row_datas[n].t_steps = new_value
-        item.setText(str(new_value))
+        self._rows[n].t_steps = new_value
+        field.setText(str(new_value))
 
-        # TODO emit signal
+        _type = self.get_row_type(n)
+        signal_data = {"n":n, "type":_type}
+        self._controller.data_changed.emit(signal_data)
         return
     
     def handle_correct(self, n):
@@ -377,52 +233,257 @@ class InitialStateTable(QTableWidget):
         return
     
     def handle_autocorrect_change(self, state, n):
-        self._row_datas[n].autocorrect = (state==2)
+        self._rows[n].autocorrect = (state==2)
 
-        # TODO emit signal
+        if (state==2):
+            _type = self.get_row_type(n)
+            signal_data = {"n":n, "type":_type}
+            self._controller.data_changed.emit(signal_data)
         return
     
-    def handle_eps_changed(self, item, n):
-        prev_value = self._row_datas[n].eps
+    def handle_eps_changed(self, n):
+        field = self._rows[n].eps_field
+        prev_value = self._rows[n].eps
 
         try:
-            new_value = float(item.text())
+            new_value = float(field.text())
         except:
-            item.setText(f"{prev_value:.5E}")
+            field.setText(f"{prev_value:.5E}")
             return
-        self._row_datas[n].eps = new_value
-        item.setText(f"{new_value:.5E}")
+        self._rows[n].eps = new_value
+        field.setText(f"{new_value:.5E}")
 
-        # TODO emit signal
+        _type = self.get_row_type(n)
+        signal_data = {"n":n, "type":_type}
+        self._controller.data_changed.emit(signal_data)
         return
     
-    def handle_eig_N_changed(self, item, n):
-        prev_value = self._row_datas[n].eig_N
+    def handle_eig_N_changed(self, n):
+        field = self._rows[n].eig_N
+        prev_value = self._rows[n].eig_N
 
         try:
-            new_value = int(item.text())
+            new_value = int(field.text())
         except:
-            item.setText(str(prev_value))
+            field.setText(str(prev_value))
             return
-        self._row_datas[n].eig_N = new_value
-        item.setText(str(new_value))
+        self._rows[n].eig_N = new_value
+        field.setText(str(new_value))
 
-        # TODO emit signal
+        _type = self.get_row_type(n)
+        signal_data = {"n":n, "type":_type}
+        self._controller.data_changed.emit(signal_data)
         return
     
     def handle_eig_dir_changed(self, n, index_combo):
-        self._row_datas[n].dt = ("+", "-")[index_combo] # TODO refactor ("+", "-")
+        self._rows[n].dt = ("+", "-")[index_combo] # TODO refactor ("+", "-")
 
-        # TODO emit signal
+        _type = self.get_row_type(n)
+        signal_data = {"n":n, "type":_type}
+        self._controller.data_changed.emit(signal_data)
         return
 
+###############################################################################
+###############################################################################
 
-# Example usage
-if __name__ == "__main__":
-    app = QApplication([])
+class RowDataDragpoint():
+    def __init__(self, N_variables, available_types):
+        self.N_variables = N_variables
+        self.available_types = available_types
+        # Data
+        self.type = "Dragpoint"
+        self.variables = np.zeros(self.N_variables)
+        self.show = False
+        self.dt = "+"
+        self.t_start = 0.0
+        self.t_end = 10.0
+        self.t_steps = 1000
+        
+        # Views
+        self.type_field = None
+        self.variables_fields = None
+        self.show_field = None
+        self.dt_field = None
+        self.t_start_field = None
+        self.t_end_field = None
+        self.t_steps_field = None
+        return
     
-    table = InitialStateTable(["x", "y", "z"])
-    table.resize(600, 300)
-    table.show()
+    def add_to_table(self, table:InitialStateTable, n:int):
+        self.type_field = QComboBox()
+        self.type_field.addItems(self.available_types)
+        self.type_field.setCurrentIndex(self.available_types.index(self.type))
+        self.type_field.currentTextChanged.connect(
+            lambda text, n=n:
+            table.on_type_changed(n, text))
+        table.setCellWidget(n, 0, self.type_field)
+
+        self.variables_fields = [None,]*self.N_variables
+        for i in range(self.N_variables):
+            field = QLineEdit()
+            field.setPlaceholderText(str(self.variables[i]))
+            field.editingFinished.connect(
+                lambda n=n, i=i:
+                table.handle_variable_changed(n, i))
+            table.setCellWidget(n, 1+i, field)
+            self.variables_fields[i] = field
+
+        self.show_field = QCheckBox() # TODO how to fucking set the state to checked
+        self.show_field.stateChanged.connect(
+            lambda state, n=n: 
+            table.handle_show_change(state, n))
+        table.setCellWidget(n, self.N_variables+1, self.show_field)
+
+        self.dt_field = QComboBox()
+        self.dt_field.addItems(("+", "-"))
+        self.dt_field.setCurrentIndex(0)
+        self.dt_field.currentIndexChanged.connect(
+            lambda index_combobox, n=n:
+            table.handle_dt_changed(n, index_combobox))
+        table.setCellWidget(n, self.N_variables+2, self.dt_field)
+
+        self.t_start_field = QLineEdit()
+        self.t_start_field.setPlaceholderText(str(self.t_start))
+        self.t_start_field.editingFinished.connect(
+            lambda n=n:
+            table.handle_t_start_changed(n))
+        table.setCellWidget(n, self.N_variables+3, self.t_start_field)
+
+        self.t_end_field = QLineEdit()
+        self.t_end_field.setPlaceholderText(str(self.t_end))
+        self.t_end_field.editingFinished.connect(
+            lambda n=n:
+            table.handle_t_end_changed(n))
+        table.setCellWidget(n, self.N_variables+4, self.t_end_field)
+
+        self.t_steps_field = QLineEdit()
+        self.t_steps_field.setPlaceholderText(str(self.t_steps))
+        self.t_steps_field.editingFinished.connect(
+            lambda n=n:
+            table.handle_t_steps_changed(n))
+        table.setCellWidget(n, self.N_variables+5, self.t_steps_field)
+        return
     
-    app.exec()
+###############################################################################
+###############################################################################
+
+class RowDataSoE():
+    def __init__(self, N_variables, available_types):
+        self.N_variables = N_variables
+        self.available_types = available_types
+        # Data
+        self.type = "SoE"
+        self.variables = np.zeros(self.N_variables)
+        self.show = False
+        self.autocorrect = False
+        self.dt = "+"
+        self.eps = 1e-5
+        self.eig_N = 0
+        self.eig_dir = "+"
+        self.t_start = 0.0
+        self.t_end = 10.0
+        self.t_steps = 1000
+
+        # Views
+        self.type_field = None
+        self.variables_fields = None
+        self.show_field = None
+        self.correct_field = None
+        self.autocorrect_field = None
+        self.dt_field = None
+        self.eps_field = None
+        self.eig_N_field = None
+        self.eig_dir_field = None
+        self.t_start_field = None
+        self.t_end_field = None
+        self.t_steps_field = None
+        return
+    
+    def add_to_table(self, table, n):
+        self.type_field = QComboBox()
+        self.type_field.addItems(self.available_types)
+        self.type_field.setCurrentIndex(self.available_types.index(self.type))
+        self.type_field.currentTextChanged.connect(
+            lambda text, n=n: 
+            table.on_type_changed(n, text))
+        table.setCellWidget(n, 0, self.type_field)
+
+        self.variables_fields = [None,]*self.N_variables
+        for i in range(self.N_variables):
+            field = QLineEdit()
+            field.setPlaceholderText(str(self.variables[i]))
+            field.editingFinished.connect(
+                lambda n=n, i=i:
+                table.handle_variable_changed(n, i))
+            table.setCellWidget(n, 1+i, field)
+            self.variables_fields[i] = field
+
+        self.show_field = QCheckBox() # TODO how to fucking set the state to checked
+        self.show_field.stateChanged.connect(
+            lambda state, n=n: 
+            table.handle_show_change(state, n))
+        table.setCellWidget(n, self.N_variables+1, self.show_field)
+
+        self.correct_field = QPushButton("Correct")
+        self.correct_field.clicked.connect(
+            lambda n=n:
+            table.handle_correct(n))
+        table.setCellWidget(n, self.N_variables+2, self.correct_field)
+
+        self.autocorrect_field = QCheckBox()
+        self.autocorrect_field.stateChanged.connect(
+            lambda state, n=n: 
+            table.handle_autocorrect_change(state, n))
+        table.setCellWidget(n, self.N_variables+3, self.autocorrect_field)
+
+        self.dt_field = QComboBox()
+        self.dt_field.addItems(("+", "-"))
+        self.dt_field.setCurrentIndex(0)
+        self.dt_field.currentIndexChanged.connect(
+            lambda index_combobox, n=n:
+            table.handle_dt_changed(n, index_combobox))
+        table.setCellWidget(n, self.N_variables+4, self.dt_field)
+
+        self.eps_field = QLineEdit()
+        self.eps_field.setPlaceholderText(str(self.eps))
+        self.eps_field.editingFinished.connect(
+            lambda n=n:
+            table.handle_eps_changed(n))
+        table.setCellWidget(n, self.N_variables+5, self.eps_field)
+
+        self.eig_N_field = QLineEdit()
+        self.eig_N_field.setPlaceholderText(str(self.eig_N))
+        self.eig_N_field.editingFinished.connect(
+            lambda n=n:
+            table.handle_eig_N_changed(n))
+        table.setCellWidget(n, self.N_variables+6, self.eig_N_field)
+
+        self.eig_dir_field = QComboBox()
+        self.eig_dir_field.addItems(("+", "-"))
+        self.eig_dir_field.setCurrentIndex(0)
+        self.eig_dir_field.currentIndexChanged.connect(
+            lambda index_combobox, n=n:
+            table.handle_eig_dir_changed(n, index_combobox))
+        table.setCellWidget(n, self.N_variables+7, self.eig_dir_field)
+
+        self.t_start_field = QLineEdit()
+        self.t_start_field.setPlaceholderText(str(self.t_start))
+        self.t_start_field.editingFinished.connect(
+            lambda n=n:
+            table.handle_t_start_changed(n))
+        table.setCellWidget(n, self.N_variables+8, self.t_start_field)
+
+        self.t_end_field = QLineEdit()
+        self.t_end_field.setPlaceholderText(str(self.t_end))
+        self.t_end_field.editingFinished.connect(
+            lambda n=n:
+            table.handle_t_end_changed(n))
+        table.setCellWidget(n, self.N_variables+9, self.t_end_field)
+
+        self.t_steps_field = QLineEdit()
+        self.t_steps_field.setPlaceholderText(str(self.t_steps))
+        self.t_steps_field.editingFinished.connect(
+            lambda n=n:
+            table.handle_t_steps_changed(n))
+        table.setCellWidget(n, self.N_variables+10, self.t_steps_field)
+        return

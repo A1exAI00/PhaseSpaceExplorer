@@ -55,7 +55,7 @@ class ODEsParametersWidget(QWidget):
         return
     
     def connect_controller(self):
-        self._controller.data_in_InitialStateWidget_changed.connect(self.handle_parameters_requested)
+        self._controller.data_changed.connect(self.handle_parameters_requested)
         return
     
     def handle_parameter_value_change(self, text, changed_parameter_i):
@@ -77,5 +77,5 @@ class ODEsParametersWidget(QWidget):
     def handle_parameters_requested(self, signal_data):
         # Add parameter values to data and pass back
         signal_data["parameter_values"] = self._parameter_values
-        self._controller.parameters_sent.emit(signal_data)
+        self._controller.parameters_to_integrate_sent.emit(signal_data)
         return
