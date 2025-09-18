@@ -8,6 +8,7 @@ from app.widgets.PhaseSpacePlotWidget import PhaseSpacePlotWidget
 from app.widgets.FolderSelector import FolderSelector
 
 from backend.DynamicalSystem import DynamicalSystem
+from backend.DSLoaderFromPy import DSLoaderFromPy
 
 
 class MainWindow(QMainWindow):
@@ -77,9 +78,11 @@ class MainWindow(QMainWindow):
         psps.show()
         return
     
-    def handle_ds_folder_selected(self, path:str):
+    def handle_ds_folder_selected(self, folderpath:str):
         self.ds = DynamicalSystem()
-        self.ds.load_from_py(path)
+        loader = DSLoaderFromPy(folderpath)
+        loader.load_DS()
+        self.ds.load(loader)
         print(self.ds)
         self.mdi.removeSubWindow(self.ds_chooser)
         self.setup_PhaseSpaceWorkbench()
