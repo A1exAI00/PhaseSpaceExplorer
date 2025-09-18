@@ -5,8 +5,8 @@ parameter_names = ["g1", "g2", "k", "d"]
 time = "t"
 
 periodic_data={
-    0:[-pi, 2*pi],
-    1:[-pi, 2*pi]
+    0:(-pi, 2*pi),
+    1:(-pi, 2*pi)
 }
 
 def periodic_p1(t, y):

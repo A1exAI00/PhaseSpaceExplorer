@@ -5,7 +5,7 @@ parameter_names = ["g", "mu"]
 time = "t"
 
 periodic_data={
-    0:[-pi, 2*pi]
+    0:(-pi, 2*pi)
 }
 
 def periodic_phi(t, y):
