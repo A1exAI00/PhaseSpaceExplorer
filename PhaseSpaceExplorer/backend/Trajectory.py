@@ -2,6 +2,7 @@ from copy import deepcopy
 from typing import Callable, List, Tuple, Dict
 
 import numpy as np
+from math import isclose
 from scipy.integrate import solve_ivp
 
 from backend.misc import flatten
@@ -11,6 +12,8 @@ class Trajectory():
     def __init__(self, ODEs, initial_state):
         self._ODEs: Callable = ODEs
         self._initial_state: np.ndarray = initial_state
+
+        self._dt = "+"
 
         # The result of solve_ivp as if variables are not periodic
         self._y_sol_raw: np.ndarray | None = None
@@ -70,11 +73,12 @@ class Trajectory():
 
     @staticmethod
     def is_empty_events_raw(yev: List[np.ndarray], tev: List[np.ndarray]) -> bool:
-        if (len(yev) == 1) and (len(yev[0]) == 0):
-            return True
-        if (len(tev) == 1) and (len(tev[0]) == 0):
-            return True
-        return False
+        for i in range(len(yev)):
+            if len(yev[i]) != 0:
+                return False
+            if len(tev[i]) != 0:
+                return False
+        return True
 
     def integrate_scipy(
             self, pars, t_start, t_end, t_N,
@@ -84,7 +88,7 @@ class Trajectory():
 
         all_events = periodic_events  # TODO add "exploded to infinity" event
         t_span = (t_start, t_end)
-        dt = "+" if (t_end > t_start) else "-"
+        self._dt = "+" if (t_end > t_start) else "-"
 
         # TODO rework this magic number in max_step
         max_step = abs((t_end-t_start)/t_N * 5)
@@ -111,9 +115,11 @@ class Trajectory():
 
         ys_flat = flatten(self._y_events_raw)
         ts_flat = flatten(self._t_events_raw)
+        print(self._t_events_raw)
+        print(ts_flat)
 
         ys_ts_zip = zip(ys_flat, ts_flat)
-        ys_ts_sorted = sorted(ys_ts_zip, key=lambda y_t: y_t[1])
+        ys_ts_sorted = sorted(ys_ts_zip, key=lambda y_t_pair: y_t_pair[1])
         ys_sorted, ts_sorted = list(zip(*ys_ts_sorted))
 
         self._y_events_sorted = ys_sorted
@@ -124,23 +130,26 @@ class Trajectory():
         ys = self._y_sol_raw.copy()
         ts = self._t_sol_raw.copy()
 
-        dt = "+" if ts[0] < ts[-1] else "-"
-
         for (i, t_event) in enumerate(self._t_events_sorted):
             state_to_insert = self._y_events_sorted[i]
             time_to_insert = t_event
             for (j, t) in enumerate(ts):
-                if (dt == "+") and (t >= t_event):
+                if (self._dt == "+") and (t >= t_event):
                     ys = np.insert(ys, j, state_to_insert, axis=1)
                     ts = np.insert(ts, j, time_to_insert)
                     break
-                if (dt == "-") and (t <= t_event):
+                if (self._dt == "-") and (t <= t_event):
                     ys = np.insert(ys, j, state_to_insert, axis=1)
                     ts = np.insert(ts, j, time_to_insert)
                     break
 
         self._y_sol_ful = ys
         self._t_sol_ful = ts
+
+        # print(self._y_sol_ful)
+        # print(self._t_sol_ful)
+        # print(self._t_events_raw)
+        # print(self._t_events_sorted)
         return
 
     def split(self) -> None:
@@ -154,9 +163,12 @@ class Trajectory():
         i_events = []
         for t_event in self._t_events_sorted:
             for (i, t) in enumerate(self._t_sol_ful):
-                if (t == t_event):
+                if (t == t_event) or isclose(t, t_event):
                     i_events.append(i)
                     break
+
+        if self._dt == "-":
+            i_events = list(reversed(i_events))
 
         # Add first and last temporal indexes, makes algorithm easier
         if (i_events[0] != 0):
