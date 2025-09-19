@@ -85,8 +85,8 @@ class InitialStateWidget(QWidget):
         trajectory.integrate_scipy(parameter_values,
                                    t_start, t_end,
                                    row_data.t_steps,
-                                   periodic_data=self._ds.periodic_data,
                                    periodic_events=self._ds.periodic_events)
+        trajectory.process_periodic_variables(self._ds.periodic_data)
         signal_data["trajectory"] = trajectory
         self._controller.trajectory_integrated.emit(signal_data)
         return
