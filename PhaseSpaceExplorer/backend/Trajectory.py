@@ -1,11 +1,12 @@
 from copy import deepcopy
 from typing import Callable, List, Tuple, Dict
+from math import isclose
 
 import numpy as np
-from math import isclose
 from scipy.integrate import solve_ivp
 
 from backend.misc import flatten
+from backend.exceptions.Trajectory_exceptions import *
 
 
 class Trajectory():
@@ -13,7 +14,8 @@ class Trajectory():
         self._ODEs: Callable = ODEs
         self._initial_state: np.ndarray = initial_state
 
-        self._dt = "+"
+        self._dt = None
+        self._integrated = False
 
         # The result of solve_ivp as if variables are not periodic
         self._y_sol_raw: np.ndarray | None = None
@@ -52,11 +54,11 @@ class Trajectory():
 
     @property
     def y_events(self):
-        return self._y_events
+        return self._y_events_sorted
 
     @property
     def t_events(self):
-        return self._t_events
+        return self._t_events_sorted
 
     @property
     def init_state(self):
@@ -73,6 +75,7 @@ class Trajectory():
 
     @staticmethod
     def is_empty_events_raw(yev: List[np.ndarray], tev: List[np.ndarray]) -> bool:
+        # Check if all ndarrays are empty
         for i in range(len(yev)):
             if len(yev[i]) != 0:
                 return False
@@ -82,11 +85,12 @@ class Trajectory():
 
     def integrate_scipy(
             self, pars, t_start, t_end, t_N,
-            periodic_events=[],
+            periodic_events: List[Callable] = [],
             alg: str = "RK45", rtol: float = 1e-5, atol: float = 1e-5
     ) -> None:
 
-        all_events = periodic_events  # TODO add "exploded to infinity" event
+        # TODO add "exploded to infinity" event
+        all_events = periodic_events
         t_span = (t_start, t_end)
         self._dt = "+" if (t_end > t_start) else "-"
 
@@ -105,9 +109,24 @@ class Trajectory():
         # Get raw solution and raw events from solve_ivp
         self._y_sol_raw, self._t_sol_raw = sol.y, sol.t
         self._y_events_raw, self._t_events_raw = sol.y_events, sol.t_events
+
+        self._integrated = True
         return
 
-    def flatten_and_sort_events(self) -> None:
+    def process_periodic_variables(
+        self, periodic_data: Dict[int, Tuple[float, float]] = {}
+    ) -> None:
+
+        if not self._integrated:
+            raise NotIntegratedYetException()
+
+        self._flatten_and_sort_events()
+        self._insert_events()
+        self._split()
+        self._translate_to_period(periodic_data)
+        return
+
+    def _flatten_and_sort_events(self) -> None:
         if self.is_empty_events_raw(self._y_events_raw, self._t_events_raw):
             self._y_events_sorted = []
             self._t_events_sorted = []
@@ -115,8 +134,6 @@ class Trajectory():
 
         ys_flat = flatten(self._y_events_raw)
         ts_flat = flatten(self._t_events_raw)
-        print(self._t_events_raw)
-        print(ts_flat)
 
         ys_ts_zip = zip(ys_flat, ts_flat)
         ys_ts_sorted = sorted(ys_ts_zip, key=lambda y_t_pair: y_t_pair[1])
@@ -126,7 +143,7 @@ class Trajectory():
         self._t_events_sorted = ts_sorted
         return
 
-    def insert_events(self) -> None:
+    def _insert_events(self) -> None:
         ys = self._y_sol_raw.copy()
         ts = self._t_sol_raw.copy()
 
@@ -145,14 +162,9 @@ class Trajectory():
 
         self._y_sol_ful = ys
         self._t_sol_ful = ts
-
-        # print(self._y_sol_ful)
-        # print(self._t_sol_ful)
-        # print(self._t_events_raw)
-        # print(self._t_events_sorted)
         return
 
-    def split(self) -> None:
+    def _split(self) -> None:
         # In case of no events
         if not self._t_events_sorted:
             self._y_sols = [self._y_sol_ful,]
@@ -190,7 +202,7 @@ class Trajectory():
         self._t_sols = tss
         return
 
-    def translate_to_period(self, periodic_data) -> None:
+    def _translate_to_period(self, periodic_data) -> None:
         new_yss = deepcopy(self._y_sols)
 
         # Iterate over all subsolutions
@@ -223,13 +235,4 @@ class Trajectory():
             new_yss[i] = ys
 
         self._y_sols = new_yss
-        return
-
-    def process_periodic_variables(
-        self, periodic_data: Dict[int, Tuple[float, float]] = {}
-    ) -> None:
-        self.flatten_and_sort_events()
-        self.insert_events()
-        self.split()
-        self.translate_to_period(periodic_data)
         return
